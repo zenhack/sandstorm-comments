@@ -1,14 +1,16 @@
 'use strict';
 window.addEventListener('DOMContentLoaded', function() {
-	var articleId = window.location.host + window.location.pathname;
-	var commentElt = document.getElementById('comments');
-	var commentUrl = 'http://localhost:8899/comments?articleId=' +
-		encodeURIComponent(articleId);
-
+	var commentElt = document.getElementById('ss-comments');
 	if(commentElt === null) {
-		console.error('"#comment" element not found; can\'t embed comments.');
+		console.error('"#ss-comments" element not found; can\'t embed comments.');
 		return;
 	}
+
+	var scriptElt = document.getElementById('ss-comments-script');
+	var articleId = window.location.host + window.location.pathname;
+	var baseUrl = scriptElt.attributes.src.value.replace('static/embed.min.js', '');
+	var commentUrl = baseUrl + 'comments?articleId=' +
+		encodeURIComponent(articleId);
 
 	var req = new XMLHttpRequest();
 	req.onreadystatechange = function() {
@@ -18,6 +20,10 @@ window.addEventListener('DOMContentLoaded', function() {
 				return;
 			}
 			commentElt.innerHTML = req.responseText;
+			var formElt = commentElt.getElementsByTagName('form')[0];
+			formElt.attributes.action.value = baseUrl + 'new-comment';
+			var redirectElt = document.getElementById('ss-comments-redirect');
+			redirectElt.attributes.value.value = window.location.href;
 		}
 	};
 	req.open('GET', commentUrl, true);

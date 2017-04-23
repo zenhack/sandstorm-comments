@@ -15,11 +15,12 @@ document.addEventListener("DOMContentLoaded", function() {
 	window.parent.postMessage({
 		renderTemplate: {
 			rpcId: "0",
-			template: '<script src="' + window.location.protocol +
-					"//$API_HOST/.sandstorm-token/$API_TOKEN/static/embed.min.js" +
+			template: '<script id="ss-comments-script" src="' + window.location.protocol +
+					'//$API_HOST/.sandstorm-token/$API_TOKEN/static/embed.min.js' +
 					'"></script>',
 			forSharing: true,
 			clipboardButton: 'left',
+			// TODO: restrict roles
 		}
 	}, "*");
 

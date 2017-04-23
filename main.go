@@ -140,6 +140,8 @@ func addPost(needsModeration bool) http.Handler {
 			w.Write([]byte("Internal Server Error"))
 			return
 		}
+		log.Print(req.PostForm)
+		http.Redirect(w, req, req.PostForm.Get("redirect"), http.StatusSeeOther)
 	})
 }
 
@@ -151,8 +153,8 @@ func main() {
 
 	r.Methods("GET").PathPrefix("/static/").
 		Handler(http.FileServer(http.Dir(staticDir + "/..")))
-	r.Methods("GET").Path("/"). // MatcherFunc(havePermission("admin")).
-					HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	r.Methods("GET").Path("/").
+		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			tpls.ExecuteTemplate(w, "index.html", nil)
 		})
 	r.Methods("POST").Path("/settings").
@@ -160,11 +162,8 @@ func main() {
 			http.Redirect(w, req, "/", http.StatusSeeOther)
 		})
 	r.Methods("POST").Path("/new-comment").
-		MatcherFunc(havePermission("post-unmoderated")).
+		MatcherFunc(havePermission("post")).
 		Handler(CSRF(addPost(false)))
-	r.Methods("POST").Path("/new-comment").
-		MatcherFunc(havePermission("post-moderated")).
-		Handler(CSRF(addPost(true)))
 	r.Methods("GET").Path("/comments").HandlerFunc(showComments)
 	http.Handle("/", r)
 	http.ListenAndServe(":8000", nil)

@@ -1,21 +1,22 @@
-<div>
+<div id="ss-comments-list">
 {{ range .Comments -}}
-<div>
-	<div>{{ .Author }}</div>
-	<div>{{ .Body }}</div>
+<div class="ss-comments-comment">
+	<div class="ss-comments-author">{{ .Author }}</div>
+	<div class="ss-comments-body">{{ .Body }}</div>
 </div>
 {{- end -}}
 </div>
-<form action="/new-comment" method="POST">
+<form id="ss-comments-form" action="/new-comment" method="POST">
 	<div>
 		<div>
-			<input name="author" placeholder="username" />
+			<input id="ss-comments-author-input" name="author" placeholder="username" />
 		</div>
 		<div>
-			<textarea name="body" placeholder="type your comment..."></textarea>
+			<textarea id="ss-comments-body-input" name="body" placeholder="type your comment..."></textarea>
 		</div>
+		<button id="ss-comments-submit" type="submit">Post</button>
 	</div>
+	<input id="ss-comments-redirect" type="hidden" name="redirect" value="" />
 	<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
 	{{ .CSRFField }}
-	<button type="submit">Post</button>
 </form>
