@@ -1,0 +1,21 @@
+<div>
+{{ range .Comments -}}
+<div>
+	<div>{{ .Author }}</div>
+	<div>{{ .Body }}</div>
+</div>
+{{- end -}}
+</div>
+<form action="/new-comment" method="POST">
+	<div>
+		<div>
+			<input name="author" placeholder="username" />
+		</div>
+		<div>
+			<textarea name="body" placeholder="type your comment..."></textarea>
+		</div>
+	</div>
+	<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
+	{{ .CSRFField }}
+	<button type="submit">Post</button>
+</form>

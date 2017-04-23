@@ -1,0 +1,7 @@
+
+CREATE TABLE IF NOT EXISTS comments (
+	article VARCHAR(255) NOT NULL,
+	author VARCHAR(80) NOT NULL,
+	body TEXT NOT NULL,
+	needsMod BOOL NOT NULL
+);

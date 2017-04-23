@@ -1,0 +1,6 @@
+/app
+/sandstorm-comments
+*.sqlite3
+csrfKey
+*.min.js
+*.swp
