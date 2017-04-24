@@ -12,6 +12,16 @@
 			<h1>Settings</h1>
 
 			<form action="/settings" method="post">
+				<div>
+					<label for="require-moderation">Require Moderation?</label>
+					<input
+						type="checkbox"
+						id="require-moderation"
+						name="require-moderation"
+						{{ if .Settings.RequireModeration -}}
+						checked="checked"
+						{{- end }} />
+				</div>
 				<button type="submit">Apply</button>
 			</form>
 

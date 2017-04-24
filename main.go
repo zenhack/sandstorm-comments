@@ -45,6 +45,29 @@ type CommentPageArgs struct {
 	CSRFField template.HTML
 }
 
+type Settings struct {
+	RequireModeration bool
+}
+
+type AdminPageArgs struct {
+	Settings Settings
+}
+
+func getKey(key string) (string, error) {
+	row := db.QueryRow("SELECT value FROM key_val WHERE key = ?", key)
+	ret := ""
+	err := row.Scan(&ret)
+	return ret, err
+}
+
+func setKey(key string, value string) error {
+	_, err := db.Exec(
+		"INSERT OR REPLACE INTO key_val (key, value) VALUES (?, ?)",
+		key, value,
+	)
+	return err
+}
+
 func (c Comment) Sanitize() SafeComment {
 	unsafeHtml := blackfriday.MarkdownCommon([]byte(c.Body))
 	safeHtml := bluemonday.UGCPolicy().SanitizeBytes(unsafeHtml)
@@ -116,37 +139,49 @@ func initDB() {
 	chkfatal(err)
 }
 
-func addPost(needsModeration bool) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if err := req.ParseForm(); err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid form body"))
-		}
+func addPost(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("Invalid form body"))
+	}
 
-		articleId := req.PostForm.Get("article_id")
-		comment := Comment{
-			Author: req.PostForm.Get("author"),
-			Body:   req.PostForm.Get("body"),
-		}
-		_, err := db.Exec(
-			"INSERT INTO comments (article, author, body, needsMod) VALUES (?, ?, ?, ?)",
-			articleId,
-			comment.Author,
-			comment.Body,
-			needsModeration,
-		)
-		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte("Internal Server Error"))
-			return
-		}
-		log.Print(req.PostForm)
-		http.Redirect(w, req, req.PostForm.Get("redirect"), http.StatusSeeOther)
-	})
+	val, err := getKey("require-moderation")
+	if err != nil {
+		val = "true"
+		err = setKey("require-moderation", val)
+	}
+	if err != nil {
+		serverErr(w, "getting/setting require-moderation key", err)
+		return
+	}
+	requireModeration := val != "false"
+
+	articleId := req.PostForm.Get("article_id")
+	comment := Comment{
+		Author: req.PostForm.Get("author"),
+		Body:   req.PostForm.Get("body"),
+	}
+	_, err = db.Exec(
+		"INSERT INTO comments (article, author, body, needsMod) VALUES (?, ?, ?, ?)",
+		articleId,
+		comment.Author,
+		comment.Body,
+		requireModeration,
+	)
+	if err != nil {
+		serverErr(w, "Saving comment to the database", err)
+		return
+	}
+	log.Print(req.PostForm)
+	http.Redirect(w, req, req.PostForm.Get("redirect"), http.StatusSeeOther)
 }
 
 func main() {
+	// FIXME: this is causing everything to fail for reasons I don't
+	// understand. This needs to get sorted out before we ship.
+	//
 	// CSRF := initCSRF()
+
 	CSRF := func(h http.Handler) http.Handler { return h }
 	initDB()
 	r := mux.NewRouter()
@@ -154,19 +189,42 @@ func main() {
 	r.Methods("GET").PathPrefix("/static/").
 		Handler(http.FileServer(http.Dir(staticDir + "/..")))
 	r.Methods("GET").Path("/").
+		MatcherFunc(havePermission("admin")).
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			tpls.ExecuteTemplate(w, "index.html", nil)
+			val, _ := getKey("require-moderation")
+			tpls.ExecuteTemplate(w, "index.html", AdminPageArgs{
+				Settings: Settings{
+					RequireModeration: val != "false",
+				},
+			})
 		})
 	r.Methods("POST").Path("/settings").
-		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		Handler(CSRF(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			requireModeration := req.PostForm.Get("require-moderation")
+			if requireModeration == "on" {
+				requireModeration = "true"
+			} else {
+				requireModeration = "false"
+			}
+			err := setKey("require-moderation", requireModeration)
+			if err != nil {
+				serverErr(w, "setting require-moderation key", err)
+				return
+			}
 			http.Redirect(w, req, "/", http.StatusSeeOther)
-		})
+		})))
 	r.Methods("POST").Path("/new-comment").
 		MatcherFunc(havePermission("post")).
-		Handler(CSRF(addPost(false)))
+		Handler(CSRF(http.HandlerFunc(addPost)))
 	r.Methods("GET").Path("/comments").HandlerFunc(showComments)
 	http.Handle("/", r)
 	http.ListenAndServe(":8000", nil)
+}
+
+func serverErr(w http.ResponseWriter, ctx string, err error) {
+	log.Print("Error %s: %v", ctx, err)
+	w.WriteHeader(500)
+	w.Write([]byte("Internal Server Error"))
 }
 
 func showComments(w http.ResponseWriter, req *http.Request) {
@@ -178,9 +236,7 @@ func showComments(w http.ResponseWriter, req *http.Request) {
 	}
 	comments, err := getComments(articleId)
 	if err != nil {
-		log.Printf("Error getting comments for article %q: %v", articleId, err)
-		w.WriteHeader(500)
-		w.Write([]byte("Internal Server Error"))
+		serverErr(w, "getting comments for article: "+articleId, err)
 		return
 	}
 	safeComments := sanitizeComments(comments)
