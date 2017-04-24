@@ -30,20 +30,17 @@ var (
 )
 
 type Comment struct {
-	Author string
-	Body   string
-}
-
-type SafeComment struct {
 	Author          string
-	Body            template.HTML
+	Body            string
+	SafeBody        template.HTML
+	Id              int
 	NeedsModeration bool
 	ArticleId       string
 }
 
 type CommentPageArgs struct {
 	ArticleId string
-	Comments  []SafeComment
+	Comments  []Comment
 	CSRFField template.HTML
 }
 
@@ -53,7 +50,7 @@ type Settings struct {
 
 type AdminPageArgs struct {
 	Settings Settings
-	Comments []SafeComment
+	Comments []Comment
 }
 
 func getKey(key string) (string, error) {
@@ -71,13 +68,11 @@ func setKey(key string, value string) error {
 	return err
 }
 
-func (c Comment) Sanitize() SafeComment {
+// Populate the SafeBody field of c, by sanitizing the Body field.
+func (c *Comment) Sanitize() {
 	unsafeHtml := blackfriday.MarkdownCommon([]byte(c.Body))
 	safeHtml := bluemonday.UGCPolicy().SanitizeBytes(unsafeHtml)
-	return SafeComment{
-		Author: c.Author,
-		Body:   template.HTML(safeHtml),
-	}
+	c.SafeBody = template.HTML(safeHtml)
 }
 
 func strDefault(s, def string) string {
@@ -91,14 +86,6 @@ func chkfatal(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func sanitizeComments(comments []Comment) []SafeComment {
-	ret := make([]SafeComment, len(comments))
-	for i := range comments {
-		ret[i] = comments[i].Sanitize()
-	}
-	return ret
 }
 
 func getComments(articleId string) ([]Comment, error) {
@@ -195,11 +182,37 @@ func main() {
 		MatcherFunc(havePermission("admin")).
 		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			val, _ := getKey("require-moderation")
+
+			rows, err := db.Query(
+				`SELECT id, author, body, needsMod, article
+				FROM comments`)
+			if err != nil {
+				serverErr(w, "Loading comments from admin page", err)
+				return
+			}
+			defer rows.Close()
+			comments := []Comment{}
+			for rows.Next() {
+				comment := Comment{}
+				err := rows.Scan(
+					&comment.Id,
+					&comment.Author,
+					&comment.Body,
+					&comment.NeedsModeration,
+					&comment.ArticleId)
+				if err != nil {
+					serverErr(w, "Loading comments from admin page", err)
+					return
+				}
+				(&comment).Sanitize()
+				comments = append(comments, comment)
+			}
+
 			tpls.ExecuteTemplate(w, "index.html", AdminPageArgs{
 				Settings: Settings{
 					RequireModeration: val != "false",
 				},
-				Comments: []SafeComment{},
+				Comments: comments,
 			})
 		})
 	r.Methods("POST").Path("/settings").
@@ -226,7 +239,7 @@ func main() {
 }
 
 func serverErr(w http.ResponseWriter, ctx string, err error) {
-	log.Print("Error %s: %v", ctx, err)
+	log.Printf("Error %s: %v", ctx, err)
 	w.WriteHeader(500)
 	w.Write([]byte("Internal Server Error"))
 }
@@ -243,11 +256,13 @@ func showComments(w http.ResponseWriter, req *http.Request) {
 		serverErr(w, "getting comments for article: "+articleId, err)
 		return
 	}
-	safeComments := sanitizeComments(comments)
+	for i := range comments {
+		(&comments[i]).Sanitize()
+	}
 	log.Printf("CSRF Token: %q", csrf.Token(req))
 	err = tpls.ExecuteTemplate(w, "comments.html", CommentPageArgs{
 		ArticleId: articleId,
-		Comments:  safeComments,
+		Comments:  comments,
 		CSRFField: csrf.TemplateField(req),
 	})
 	if err != nil {

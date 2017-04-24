@@ -62,7 +62,7 @@
 				{{ range .Comments -}}
 				<td>{{ .ArticleId }}</td>
 				<td>{{ .Author }}</td>
-				<td>{{ .Body }}</td>
+				<td>{{ .SafeBody }}</td>
 				<td>
 					{{- if .NeedsModeration -}}
 						Needs Moderation
@@ -72,9 +72,13 @@
 				</td>
 				<td>
 					{{ if .NeedsModeration -}}
-					<button>Approve</button>
+					<form action="/approve/{{ .Id }}">
+						<button type="submit">Approve</button>
+					</form>
 					{{- end }}
-					<button>Delete</button>
+					<form action="/delete/{{ .Id }}">
+						<button type="submit">Delete</button>
+					</form>
 				</td>
 				{{- end }}
 			</table>

@@ -2,7 +2,7 @@
 {{ range .Comments -}}
 <div class="ss-comments-comment">
 	<div class="ss-comments-author">{{ .Author }}</div>
-	<div class="ss-comments-body">{{ .Body }}</div>
+	<div class="ss-comments-body">{{ .SafeBody }}</div>
 </div>
 {{- end -}}
 </div>
