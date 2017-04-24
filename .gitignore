@@ -1,4 +1,6 @@
 /app
+/app.debug
+/app.stripped
 /sandstorm-comments
 *.sqlite3
 csrfKey
