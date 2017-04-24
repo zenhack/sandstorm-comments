@@ -35,8 +35,10 @@ type Comment struct {
 }
 
 type SafeComment struct {
-	Author string
-	Body   template.HTML
+	Author          string
+	Body            template.HTML
+	NeedsModeration bool
+	ArticleId       string
 }
 
 type CommentPageArgs struct {
@@ -51,6 +53,7 @@ type Settings struct {
 
 type AdminPageArgs struct {
 	Settings Settings
+	Comments []SafeComment
 }
 
 func getKey(key string) (string, error) {
@@ -196,6 +199,7 @@ func main() {
 				Settings: Settings{
 					RequireModeration: val != "false",
 				},
+				Comments: []SafeComment{},
 			})
 		})
 	r.Methods("POST").Path("/settings").

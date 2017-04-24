@@ -49,6 +49,36 @@
 
 			<p>Comments for each of them will be managed separately.</p>
 
+			<h1>Manage Comments</h1>
+
+			<table>
+				<tr>
+					<th>Page</th>
+					<th>Author</th>
+					<th>Content</th>
+					<th>State</th>
+					<th>Actions</th>
+				</tr>
+				{{ range .Comments -}}
+				<td>{{ .ArticleId }}</td>
+				<td>{{ .Author }}</td>
+				<td>{{ .Body }}</td>
+				<td>
+					{{- if .NeedsModeration -}}
+						Needs Moderation
+					{{- else -}}
+						Published
+					{{- end -}}
+				</td>
+				<td>
+					{{ if .NeedsModeration -}}
+					<button>Approve</button>
+					{{- end }}
+					<button>Delete</button>
+				</td>
+				{{- end }}
+			</table>
+
 		</div>
 	</body>
 </html>
