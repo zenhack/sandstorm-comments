@@ -222,7 +222,6 @@ const myCommand :Spk.Manifest.Command = (
     (key = "STATIC_ASSETS", value = "/opt/app/static"),
     (key = "TEMPLATE_DIR", value = "/opt/app/templates"),
     (key = "SCHEMA_FILE", value = "/opt/app/schema.sql"),
-    (key = "CSRF_KEYFILE", value = "/var/csrfKey"),
   ]
 );
 

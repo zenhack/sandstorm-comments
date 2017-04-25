@@ -22,6 +22,7 @@
 						checked="checked"
 						{{- end }} />
 				</div>
+				{{ .CSRFField }}
 				<button type="submit">Apply</button>
 			</form>
 
@@ -59,27 +60,32 @@
 					<th>State</th>
 					<th>Actions</th>
 				</tr>
+				{{ $csrf := .CSRFField }}
 				{{ range .Comments -}}
-				<td>{{ .ArticleId }}</td>
-				<td>{{ .Author }}</td>
-				<td>{{ .SafeBody }}</td>
-				<td>
-					{{- if .NeedsModeration -}}
-						Needs Moderation
-					{{- else -}}
-						Published
-					{{- end -}}
-				</td>
-				<td>
-					{{ if .NeedsModeration -}}
-					<form action="/approve/{{ .Id }}">
-						<button type="submit">Approve</button>
-					</form>
-					{{- end }}
-					<form action="/delete/{{ .Id }}">
-						<button type="submit">Delete</button>
-					</form>
-				</td>
+				<tr>
+					<td>{{ .ArticleId }}</td>
+					<td>{{ .Author }}</td>
+					<td>{{ .SafeBody }}</td>
+					<td>
+						{{- if .NeedsModeration -}}
+							Needs Moderation
+						{{- else -}}
+							Published
+						{{- end -}}
+					</td>
+					<td>
+						{{ if .NeedsModeration -}}
+						<form action="/approve/{{ .Id }}" method="post">
+							{{ $csrf }}
+							<button type="submit">Approve</button>
+						</form>
+						{{- end }}
+						<form action="/delete/{{ .Id }}" method="post">
+							{{ $csrf }}
+							<button type="submit">Delete</button>
+						</form>
+					</td>
+				</tr>
 				{{- end }}
 			</table>
 

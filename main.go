@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"html/template"
 	"io/ioutil"
@@ -10,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/microcosm-cc/bluemonday"
@@ -22,7 +20,7 @@ var (
 	staticDir   = strDefault(os.Getenv("STATIC_ASSETS"), "static")
 	templateDir = strDefault(os.Getenv("TEMPLATE_DIR"), "templates")
 	schemaFile  = strDefault(os.Getenv("SCHEMA_FILE"), "./schema.sql")
-	csrfKeyfile = strDefault(os.Getenv("CSRF_KEYFILE"), "./csrfKey")
+	csrfKey     = ""
 
 	tpls = template.Must(template.ParseGlob(templateDir + "/*.html"))
 
@@ -49,8 +47,9 @@ type Settings struct {
 }
 
 type AdminPageArgs struct {
-	Settings Settings
-	Comments []Comment
+	Settings  Settings
+	Comments  []Comment
+	CSRFField template.HTML
 }
 
 func getKey(key string) (string, error) {
@@ -109,17 +108,6 @@ func getComments(articleId string) ([]Comment, error) {
 	return comments, nil
 }
 
-func initCSRF() func(http.Handler) http.Handler {
-	key, err := ioutil.ReadFile(csrfKeyfile)
-	if err != nil || len(key) != 32 {
-		log.Print("Generating new CSRF Key")
-		key = make([]byte, 32)
-		rand.Read(key)
-		chkfatal(ioutil.WriteFile(csrfKeyfile, key, 0600))
-	}
-	return csrf.Protect(key, csrf.Secure(os.Getenv("DEV_MODE") != "1"))
-}
-
 func initDB() {
 	schema, err := ioutil.ReadFile(schemaFile)
 	chkfatal(err)
@@ -129,7 +117,7 @@ func initDB() {
 	chkfatal(err)
 }
 
-func addPost(w http.ResponseWriter, req *http.Request) {
+func addComment(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(400)
 		w.Write([]byte("Invalid form body"))
@@ -162,77 +150,110 @@ func addPost(w http.ResponseWriter, req *http.Request) {
 		serverErr(w, "Saving comment to the database", err)
 		return
 	}
-	log.Print(req.PostForm)
 	http.Redirect(w, req, req.PostForm.Get("redirect"), http.StatusSeeOther)
 }
 
-func main() {
-	// FIXME: this is causing everything to fail for reasons I don't
-	// understand. This needs to get sorted out before we ship.
-	//
-	// CSRF := initCSRF()
+func adminPage(w http.ResponseWriter, req *http.Request) {
+	val, _ := getKey("require-moderation")
 
-	CSRF := func(h http.Handler) http.Handler { return h }
+	rows, err := db.Query(
+		`SELECT id, author, body, needsMod, article
+				FROM comments`)
+	if err != nil {
+		serverErr(w, "Loading comments from admin page", err)
+		return
+	}
+	defer rows.Close()
+	comments := []Comment{}
+	for rows.Next() {
+		comment := Comment{}
+		err := rows.Scan(
+			&comment.Id,
+			&comment.Author,
+			&comment.Body,
+			&comment.NeedsModeration,
+			&comment.ArticleId)
+		if err != nil {
+			serverErr(w, "Loading comments from admin page", err)
+			return
+		}
+		(&comment).Sanitize()
+		comments = append(comments, comment)
+	}
+
+	err = tpls.ExecuteTemplate(w, "index.html", AdminPageArgs{
+		Settings: Settings{
+			RequireModeration: val != "false",
+		},
+		Comments:  comments,
+		CSRFField: csrfField(csrfKey, req),
+	})
+	if err != nil {
+		log.Print("Error rendering template:", err)
+	}
+}
+
+func postSettings(w http.ResponseWriter, req *http.Request) {
+	requireModeration := req.PostForm.Get("require-moderation")
+	if requireModeration == "on" {
+		requireModeration = "true"
+	} else {
+		requireModeration = "false"
+	}
+	err := setKey("require-moderation", requireModeration)
+	if err != nil {
+		serverErr(w, "setting require-moderation key", err)
+		return
+	}
+	http.Redirect(w, req, "/", http.StatusSeeOther)
+}
+
+func deleteComment(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	id := vars["id"]
+	_, err := db.Exec("DELETE FROM comments WHERE id = ?", id)
+	if err != nil {
+		serverErr(w, "deleting comment", err)
+		return
+	}
+	http.Redirect(w, req, "/", http.StatusSeeOther)
+}
+func approveComment(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	id := vars["id"]
+	_, err := db.Exec("UPDATE comments SET needsMod = 0 WHERE id = ?", id)
+	if err != nil {
+		serverErr(w, "approving comment", err)
+		return
+	}
+	http.Redirect(w, req, "/", http.StatusSeeOther)
+}
+
+func main() {
+	var err error
 	initDB()
+	csrfKey, err = loadCsrfKey()
+	chkfatal(err)
+
 	r := mux.NewRouter()
 
 	r.Methods("GET").PathPrefix("/static/").
 		Handler(http.FileServer(http.Dir(staticDir + "/..")))
 	r.Methods("GET").Path("/").
 		MatcherFunc(havePermission("admin")).
-		HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			val, _ := getKey("require-moderation")
-
-			rows, err := db.Query(
-				`SELECT id, author, body, needsMod, article
-				FROM comments`)
-			if err != nil {
-				serverErr(w, "Loading comments from admin page", err)
-				return
-			}
-			defer rows.Close()
-			comments := []Comment{}
-			for rows.Next() {
-				comment := Comment{}
-				err := rows.Scan(
-					&comment.Id,
-					&comment.Author,
-					&comment.Body,
-					&comment.NeedsModeration,
-					&comment.ArticleId)
-				if err != nil {
-					serverErr(w, "Loading comments from admin page", err)
-					return
-				}
-				(&comment).Sanitize()
-				comments = append(comments, comment)
-			}
-
-			tpls.ExecuteTemplate(w, "index.html", AdminPageArgs{
-				Settings: Settings{
-					RequireModeration: val != "false",
-				},
-				Comments: comments,
-			})
-		})
+		HandlerFunc(adminPage)
 	r.Methods("POST").Path("/settings").
-		Handler(CSRF(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			requireModeration := req.PostForm.Get("require-moderation")
-			if requireModeration == "on" {
-				requireModeration = "true"
-			} else {
-				requireModeration = "false"
-			}
-			err := setKey("require-moderation", requireModeration)
-			if err != nil {
-				serverErr(w, "setting require-moderation key", err)
-				return
-			}
-			http.Redirect(w, req, "/", http.StatusSeeOther)
-		})))
+		MatcherFunc(havePermission("admin")).
+		Handler(csrfGuard{csrfKey, "/", http.HandlerFunc(postSettings)})
+	r.Methods("POST").Path("/delete/{id:[0-9]+}").
+		MatcherFunc(havePermission("admin")).
+		Handler(csrfGuard{csrfKey, "/", http.HandlerFunc(deleteComment)})
+	r.Methods("POST").Path("/approve/{id:[0-9]+}").
+		MatcherFunc(havePermission("admin")).
+		Handler(csrfGuard{csrfKey, "/", http.HandlerFunc(approveComment)})
 	r.Methods("POST").Path("/new-comment").
 		MatcherFunc(havePermission("post")).
-		Handler(CSRF(http.HandlerFunc(addPost)))
+		Handler(csrfGuard{csrfKey, "/comments", http.HandlerFunc(addComment)})
 	r.Methods("GET").Path("/comments").HandlerFunc(showComments)
 	http.Handle("/", r)
 	http.ListenAndServe(":8000", nil)
@@ -259,11 +280,10 @@ func showComments(w http.ResponseWriter, req *http.Request) {
 	for i := range comments {
 		(&comments[i]).Sanitize()
 	}
-	log.Printf("CSRF Token: %q", csrf.Token(req))
 	err = tpls.ExecuteTemplate(w, "comments.html", CommentPageArgs{
 		ArticleId: articleId,
 		Comments:  comments,
-		CSRFField: csrf.TemplateField(req),
+		CSRFField: csrfField(csrfKey, req),
 	})
 	if err != nil {
 		log.Print("Rendering template:", err)
