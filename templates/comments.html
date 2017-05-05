@@ -6,17 +6,31 @@
 </div>
 {{- end -}}
 </div>
-<form id="ss-comments-form" action="/new-comment" method="POST">
-	<div>
+{{ if .NeedsLogin }}
+<a href="$<{PROTO}>://<${MAIN_DOMAIN}/>/shared/<${KEY}/>/comment-sign-in?redirect=<${REDIRECT}/>&articleId={{ .ArticleId }}">
+	Sign in to comment
+</a>
+{{ else }}
+	<p>Enter your comment below.</p>
+	{{ if .Moderated }}
+	<p class="ss-comments-notice">
+		Comments must be approved before they will be published.
+	</p>
+	{{ end }}
+	<form id="ss-comments-form" action="<${BASE_URL}/>/new-comment" method="POST">
 		<div>
-			<input id="ss-comments-author-input" name="author" placeholder="nick name" />
+			<div>
+				<input id="ss-comments-author-input" name="author" placeholder="nick name" />
+			</div>
+			<div>
+				<textarea id="ss-comments-body-input" name="body" placeholder="type your comment..."></textarea>
+			</div>
+			<button id="ss-comments-submit" type="submit">Post</button>
 		</div>
-		<div>
-			<textarea id="ss-comments-body-input" name="body" placeholder="type your comment..."></textarea>
-		</div>
-		<button id="ss-comments-submit" type="submit">Post</button>
-	</div>
-	<input id="ss-comments-redirect" type="hidden" name="redirect" value="" />
-	<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
-	{{ .CSRFField }}
-</form>
+		<input id="ss-comments-redirect" type="hidden" name="redirect"
+			value="<${REDIRECT}/>" />
+		<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
+		{{ .CSRFField }}
+	</form>
+{{ end }}
+{{/* vim: set ts=2 sw=2 noet tw=0 */}}

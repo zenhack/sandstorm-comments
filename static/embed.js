@@ -1,3 +1,4 @@
+// vim: set ts=2 sw=2 et :
 'use strict';
 window.addEventListener('DOMContentLoaded', function() {
 	var commentElt = document.getElementById('ss-comments');
@@ -6,10 +7,31 @@ window.addEventListener('DOMContentLoaded', function() {
 		return;
 	}
 
-	var scriptElt = document.getElementById('ss-comments-script');
+	var apiInfo = function() {
+		var scriptElt = document.getElementById('ss-comments-script');
+		var baseUrl = scriptElt.attributes.src.value.replace('/static/embed.min.js', '');
+		var parts = baseUrl.split('/');
+		var key = parts[parts.length - 1]; // api key; this gives us general
+																				 // access to the grain.
+		var proto = parts[0];
+		var host = parts[2]; // Two slashes in the http://, then our host.
+		var domainparts = host.split('.');
+		var subdomain = domainparts[0];
+		var maindomain = '';
+		for(var i = 1; i < domainparts.length; i++) {
+			maindomain = maindomain.concat(domainparts[i+1]);
+		}
+		return {
+			key: key,
+			subdomain: subdomain,
+			maindomain: maindomain,
+			proto: proto,
+			baseUrl: baseUrl,
+		}
+	}();
+
 	var articleId = window.location.host + window.location.pathname;
-	var baseUrl = scriptElt.attributes.src.value.replace('static/embed.min.js', '');
-	var commentUrl = baseUrl + 'comments?articleId=' +
+	var commentUrl = apiInfo.baseUrl + '/comments?articleId=' +
 		encodeURIComponent(articleId);
 
 	var req = new XMLHttpRequest();
@@ -19,11 +41,19 @@ window.addEventListener('DOMContentLoaded', function() {
 				console.error('Error fetching comments; server returned non-200 status');
 				return;
 			}
-			commentElt.innerHTML = req.responseText;
-			var formElt = commentElt.getElementsByTagName('form')[0];
-			formElt.attributes.action.value = baseUrl + 'new-comment';
-			var redirectElt = document.getElementById('ss-comments-redirect');
-			redirectElt.attributes.value.value = window.location.href;
+      var substitutions = {
+				'<${KEY}/>': apiInfo.key,
+				'<${MAIN_DOMAIN}/>': apiInfo.maindomain,
+				'<${SUB_DOMAIN}/>': apiInfo.subdomain,
+				'<${PROTO}/>': apiInfo.proto,
+				'<${BASE_URL}/>': apiInfo.baseUrl,
+				'<${REDIRECT}/>': window.location.href,
+      }
+      var text = req.responseText
+      for (var key in substitutions) {
+        text = text.split(key).join(substitutions[key]);
+      }
+      commentElt.innerHTML = text;
 		}
 	};
 	req.open('GET', commentUrl, true);

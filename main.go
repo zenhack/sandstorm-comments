@@ -25,6 +25,10 @@ var (
 	tpls = template.Must(template.ParseGlob(templateDir + "/*.html"))
 
 	db *sql.DB
+
+	kvDefaults = map[string]string{
+		"require-moderation": "true",
+	}
 )
 
 type Comment struct {
@@ -37,9 +41,11 @@ type Comment struct {
 }
 
 type CommentPageArgs struct {
-	ArticleId string
-	Comments  []Comment
-	CSRFField template.HTML
+	ArticleId  string
+	Comments   []Comment
+	CSRFField  template.HTML
+	NeedsLogin bool
+	Moderated  bool
 }
 
 type Settings struct {
@@ -56,7 +62,19 @@ func getKey(key string) (string, error) {
 	row := db.QueryRow("SELECT value FROM key_val WHERE key = ?", key)
 	ret := ""
 	err := row.Scan(&ret)
+	if err != nil {
+		ret = kvDefaults[key]
+		err = setKey(key, ret)
+	}
 	return ret, err
+}
+
+func mustGetKey(w http.ResponseWriter, key string) (string, error) {
+	val, err := getKey(key)
+	if err != nil {
+		serverErr(w, "Getting/setting key "+key, err)
+	}
+	return val, err
 }
 
 func setKey(key string, value string) error {
@@ -123,15 +141,11 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("Invalid form body"))
 	}
 
-	val, err := getKey("require-moderation")
+	val, err := mustGetKey(w, "require-moderation")
 	if err != nil {
-		val = "true"
-		err = setKey("require-moderation", val)
-	}
-	if err != nil {
-		serverErr(w, "getting/setting require-moderation key", err)
 		return
 	}
+
 	requireModeration := val != "false"
 
 	articleId := req.PostForm.Get("article_id")
@@ -154,7 +168,10 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 }
 
 func adminPage(w http.ResponseWriter, req *http.Request) {
-	val, _ := getKey("require-moderation")
+	val, err := mustGetKey(w, "require-moderation")
+	if err != nil {
+		return
+	}
 
 	rows, err := db.Query(
 		`SELECT id, author, body, needsMod, article
@@ -266,6 +283,11 @@ func serverErr(w http.ResponseWriter, ctx string, err error) {
 }
 
 func showComments(w http.ResponseWriter, req *http.Request) {
+	requireModeration, err := mustGetKey(w, "require-moderation")
+	if err != nil {
+		return
+	}
+
 	articleId := req.URL.Query().Get("articleId")
 	if articleId == "" {
 		w.WriteHeader(400)
@@ -284,6 +306,7 @@ func showComments(w http.ResponseWriter, req *http.Request) {
 		ArticleId: articleId,
 		Comments:  comments,
 		CSRFField: csrfField(csrfKey, req),
+		Moderated: requireModeration != "false",
 	})
 	if err != nil {
 		log.Print("Rendering template:", err)
