@@ -22,6 +22,16 @@
 						checked="checked"
 						{{- end }} />
 				</div>
+				<div>
+					<label for="require-sign-in">Require Sign In?</label>
+					<input
+						type="checkbox"
+						id="require-sign-in"
+						name="require-sign-in"
+						{{ if .Settings.RequireSignIn -}}
+						checked="checked"
+						{{- end }} />
+				</div>
 				{{ .CSRFField }}
 				<button type="submit">Apply</button>
 			</form>

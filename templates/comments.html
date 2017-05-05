@@ -7,7 +7,7 @@
 {{- end -}}
 </div>
 {{ if .NeedsLogin }}
-<a href="$<{PROTO}>://<${MAIN_DOMAIN}/>/shared/<${KEY}/>/comment-sign-in?redirect=<${REDIRECT}/>&articleId={{ .ArticleId }}">
+<a href="<${PROTO}/>//<${MAIN_DOMAIN}/>/shared/<${KEY}/>/comment-sign-in?redirect=<${REDIRECT}/>&articleId={{ .ArticleId }}">
 	Sign in to comment
 </a>
 {{ else }}

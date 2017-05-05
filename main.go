@@ -28,6 +28,7 @@ var (
 
 	kvDefaults = map[string]string{
 		"require-moderation": "true",
+		"require-sign-in":    "true",
 	}
 )
 
@@ -50,6 +51,7 @@ type CommentPageArgs struct {
 
 type Settings struct {
 	RequireModeration bool
+	RequireSignIn     bool
 }
 
 type AdminPageArgs struct {
@@ -82,6 +84,14 @@ func setKey(key string, value string) error {
 		"INSERT OR REPLACE INTO key_val (key, value) VALUES (?, ?)",
 		key, value,
 	)
+	return err
+}
+
+func mustSetKey(w http.ResponseWriter, key string, value string) error {
+	err := setKey(key, value)
+	if err != nil {
+		serverErr(w, "Setting key "+key, err)
+	}
 	return err
 }
 
@@ -168,7 +178,11 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 }
 
 func adminPage(w http.ResponseWriter, req *http.Request) {
-	val, err := mustGetKey(w, "require-moderation")
+	requireModeration, err := mustGetKey(w, "require-moderation")
+	if err != nil {
+		return
+	}
+	requireSignIn, err := mustGetKey(w, "require-sign-in")
 	if err != nil {
 		return
 	}
@@ -200,7 +214,8 @@ func adminPage(w http.ResponseWriter, req *http.Request) {
 
 	err = tpls.ExecuteTemplate(w, "index.html", AdminPageArgs{
 		Settings: Settings{
-			RequireModeration: val != "false",
+			RequireModeration: requireModeration != "false",
+			RequireSignIn:     requireSignIn != "false",
 		},
 		Comments:  comments,
 		CSRFField: csrfField(csrfKey, req),
@@ -210,16 +225,26 @@ func adminPage(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func commentSignIn(w http.ResponseWriter, req *http.Request) {
+	w.Write([]byte("Sign in page not yet implemeneted"))
+}
+
 func postSettings(w http.ResponseWriter, req *http.Request) {
-	requireModeration := req.PostForm.Get("require-moderation")
-	if requireModeration == "on" {
-		requireModeration = "true"
-	} else {
-		requireModeration = "false"
+	readCheckBox := func(val *string) {
+		if *val == "on" {
+			*val = "true"
+		} else {
+			*val = "false"
+		}
 	}
-	err := setKey("require-moderation", requireModeration)
-	if err != nil {
-		serverErr(w, "setting require-moderation key", err)
+	requireModeration := req.PostForm.Get("require-moderation")
+	requireSignIn := req.PostForm.Get("require-sign-in")
+	readCheckBox(&requireModeration)
+	readCheckBox(&requireSignIn)
+	if mustSetKey(w, "require-moderation", requireModeration) != nil {
+		return
+	}
+	if mustSetKey(w, "require-sign-in", requireSignIn) != nil {
 		return
 	}
 	http.Redirect(w, req, "/", http.StatusSeeOther)
@@ -271,6 +296,9 @@ func main() {
 	r.Methods("POST").Path("/new-comment").
 		MatcherFunc(havePermission("post")).
 		Handler(csrfGuard{csrfKey, "/comments", http.HandlerFunc(addComment)})
+	r.Methods("GET").Path("/comment-sign-in").
+		MatcherFunc(havePermission("post")).
+		Handler(http.HandlerFunc(commentSignIn))
 	r.Methods("GET").Path("/comments").HandlerFunc(showComments)
 	http.Handle("/", r)
 	http.ListenAndServe(":8000", nil)
@@ -284,6 +312,10 @@ func serverErr(w http.ResponseWriter, ctx string, err error) {
 
 func showComments(w http.ResponseWriter, req *http.Request) {
 	requireModeration, err := mustGetKey(w, "require-moderation")
+	if err != nil {
+		return
+	}
+	requireSignIn, err := mustGetKey(w, "require-sign-in")
 	if err != nil {
 		return
 	}
@@ -303,10 +335,11 @@ func showComments(w http.ResponseWriter, req *http.Request) {
 		(&comments[i]).Sanitize()
 	}
 	err = tpls.ExecuteTemplate(w, "comments.html", CommentPageArgs{
-		ArticleId: articleId,
-		Comments:  comments,
-		CSRFField: csrfField(csrfKey, req),
-		Moderated: requireModeration != "false",
+		ArticleId:  articleId,
+		Comments:   comments,
+		CSRFField:  csrfField(csrfKey, req),
+		Moderated:  requireModeration != "false",
+		NeedsLogin: requireSignIn != "false",
 	})
 	if err != nil {
 		log.Print("Rendering template:", err)

@@ -17,14 +17,14 @@ window.addEventListener('DOMContentLoaded', function() {
 		var host = parts[2]; // Two slashes in the http://, then our host.
 		var domainparts = host.split('.');
 		var subdomain = domainparts[0];
-		var maindomain = '';
-		for(var i = 1; i < domainparts.length; i++) {
-			maindomain = maindomain.concat(domainparts[i+1]);
-		}
+		var maindomain = new Array(domainparts.length - 1);
+    for(var i = 0; i < maindomain.length; i++) {
+      maindomain[i] = domainparts[i+1];
+    }
 		return {
 			key: key,
 			subdomain: subdomain,
-			maindomain: maindomain,
+			maindomain: maindomain.join('.'),
 			proto: proto,
 			baseUrl: baseUrl,
 		}
@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded', function() {
 				'<${SUB_DOMAIN}/>': apiInfo.subdomain,
 				'<${PROTO}/>': apiInfo.proto,
 				'<${BASE_URL}/>': apiInfo.baseUrl,
-				'<${REDIRECT}/>': window.location.href,
+				'<${REDIRECT}/>': encodeURIComponent(window.location.href),
       }
       var text = req.responseText
       for (var key in substitutions) {
