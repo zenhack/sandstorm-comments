@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	window.parent.postMessage({
 		renderTemplate: {
 			rpcId: "0",
-			template: '<script id="ss-comments-script" src="' + window.location.protocol +
+			template: '<script id="ssc-script" src="' + window.location.protocol +
 					'//$API_HOST/.sandstorm-token/$API_TOKEN/static/embed.min.js' +
 					'"></script>',
 			forSharing: true,

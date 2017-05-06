@@ -8,7 +8,7 @@ window.addEventListener('DOMContentLoaded', function() {
 	}
 
 	var apiInfo = function() {
-		var scriptElt = document.getElementById('ss-comments-script');
+		var scriptElt = document.getElementById('ssc-script');
 		var baseUrl = scriptElt.attributes.src.value.replace('/static/embed.min.js', '');
 		var parts = baseUrl.split('/');
 		var key = parts[parts.length - 1]; // api key; this gives us general

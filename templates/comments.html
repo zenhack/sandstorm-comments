@@ -1,8 +1,8 @@
-<div id="ss-comments-list">
+<div id="ssc-list">
 {{ range .Comments -}}
-<div class="ss-comments-comment">
-	<div class="ss-comments-author">{{ .Author }}</div>
-	<div class="ss-comments-body">{{ .SafeBody }}</div>
+<div class="ssc-comment">
+	<div class="ssc-author">{{ .Author }}</div>
+	<div class="ssc-body">{{ .SafeBody }}</div>
 </div>
 {{- end -}}
 </div>
@@ -13,22 +13,21 @@
 {{ else }}
 	<p>Enter your comment below.</p>
 	{{ if .Moderated }}
-	<p class="ss-comments-notice">
+	<p class="ssc-notice">
 		Comments must be approved before they will be published.
 	</p>
 	{{ end }}
-	<form id="ss-comments-form" action="<${BASE_URL}/>/new-comment" method="POST">
+	<form id="ssc-form" action="<${BASE_URL}/>/new-comment" method="POST">
 		<div>
 			<div>
-				<input id="ss-comments-author-input" name="author" placeholder="nick name" />
+				<input id="ssc-author-input" name="author" placeholder="nick name" />
 			</div>
 			<div>
-				<textarea id="ss-comments-body-input" name="body" placeholder="type your comment..."></textarea>
+				<textarea id="ssc-body-input" name="body" placeholder="type your comment..."></textarea>
 			</div>
-			<button id="ss-comments-submit" type="submit">Post</button>
+			<button id="ssc-submit" type="submit">Post</button>
 		</div>
-		<input id="ss-comments-redirect" type="hidden" name="redirect"
-			value="<${REDIRECT_RAW}/>" />
+		<input type="hidden" name="redirect" value="<${REDIRECT_RAW}/>" />
 		<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
 		{{ .CSRFField }}
 	</form>
