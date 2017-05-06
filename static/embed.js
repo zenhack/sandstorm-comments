@@ -47,7 +47,8 @@ window.addEventListener('DOMContentLoaded', function() {
 				'<${SUB_DOMAIN}/>': apiInfo.subdomain,
 				'<${PROTO}/>': apiInfo.proto,
 				'<${BASE_URL}/>': apiInfo.baseUrl,
-				'<${REDIRECT}/>': encodeURIComponent(window.location.href),
+				'<${REDIRECT_RAW}/>': window.location.href,
+				'<${REDIRECT_URI}/>': encodeURIComponent(window.location.href),
       }
       var text = req.responseText
       for (var key in substitutions) {

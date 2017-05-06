@@ -7,7 +7,7 @@
 {{- end -}}
 </div>
 {{ if .NeedsLogin }}
-<a href="<${PROTO}/>//<${MAIN_DOMAIN}/>/shared/<${KEY}/>/comment-sign-in?redirect=<${REDIRECT}/>&articleId={{ .ArticleId }}">
+<a href="<${PROTO}/>//<${MAIN_DOMAIN}/>/shared/<${KEY}/>/comment-sign-in?redirect=<${REDIRECT_URI}/>&articleId={{ .ArticleId }}">
 	Sign in to comment
 </a>
 {{ else }}
@@ -28,7 +28,7 @@
 			<button id="ss-comments-submit" type="submit">Post</button>
 		</div>
 		<input id="ss-comments-redirect" type="hidden" name="redirect"
-			value="<${REDIRECT}/>" />
+			value="<${REDIRECT_RAW}/>" />
 		<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
 		{{ .CSRFField }}
 	</form>
