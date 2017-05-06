@@ -20,7 +20,8 @@ document.addEventListener("DOMContentLoaded", function() {
 					'"></script>',
 			forSharing: true,
 			clipboardButton: 'left',
-			// TODO: restrict roles
+			roleAssignment: {roleId: 1}, // "commentor"
+			petname: "Embeded js link",
 		}
 	}, "*");
 

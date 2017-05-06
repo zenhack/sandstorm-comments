@@ -1,7 +1,7 @@
 
 Known release blockers:
 
-* [ ] Restrict permissions on offer-iframe.
+* [x] Restrict permissions on offer-iframe.
 * [ ] Get sign-in related functionality working. Is it possible to require
       logged in users, but still show the comment box on the page?
 * [ ] Make the admin UI nicer looking.
