@@ -15,5 +15,5 @@ fi
 
 cd /opt/app
 go get -v -d ./...
-./build.sh
+make
 exit 0
