@@ -5,3 +5,7 @@
 *.sqlite3
 *.min.js
 *.swp
+
+# We want to keep the file list generated in vagrant, but the host-local one
+# is likely to vary heavily from one machine to another:
+/sandstorm-files.list
