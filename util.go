@@ -5,7 +5,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -51,19 +50,21 @@ func serverErr(w http.ResponseWriter, ctx string, err error) {
 	w.Write([]byte("Internal Server Error"))
 }
 
-// Matcher func which checks that the client has the named permission. When running
-// outside of sandstorm, this is a no-op, which makes testing a bit easier.
-func havePermission(name string) mux.MatcherFunc {
-	return mux.MatcherFunc(func(req *http.Request, match *mux.RouteMatch) bool {
-		if os.Getenv("SANDSTORM") != "1" {
+// Return whether the client has the named permission.
+func havePermission(name string, req *http.Request) bool {
+	perms := strings.Split(req.Header.Get("X-Sandstorm-Permissions"), ",")
+	for _, p := range perms {
+		if p == name {
 			return true
 		}
-		perms := strings.Split(req.Header.Get("X-Sandstorm-Permissions"), ",")
-		for _, p := range perms {
-			if p == name {
-				return true
-			}
-		}
-		return false
+	}
+	return false
+}
+
+// Matcher func which checks that the client has the named permission, according to
+// `havePermission`, above.
+func matchPermission(name string) mux.MatcherFunc {
+	return mux.MatcherFunc(func(req *http.Request, match *mux.RouteMatch) bool {
+		return havePermission(name, req)
 	})
 }

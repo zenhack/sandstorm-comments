@@ -1,3 +1,4 @@
+<p>Username: {{ .Username }}</p>
 <div id="ssc-list">
 {{ range .Comments -}}
 <div class="ssc-comment">
@@ -6,11 +7,6 @@
 </div>
 {{- end -}}
 </div>
-{{ if .NeedsLogin }}
-<a href="<${PROTO}/>//<${MAIN_DOMAIN}/>/shared/<${KEY}/>/comment-sign-in?redirect=<${REDIRECT_URI}/>&articleId={{ .ArticleId }}">
-	Sign in to comment
-</a>
-{{ else }}
 	<p>Enter your comment below.</p>
 	{{ if .Moderated }}
 	<p class="ssc-notice">
@@ -19,17 +15,11 @@
 	{{ end }}
 	<form id="ssc-form" action="<${BASE_URL}/>/new-comment" method="POST">
 		<div>
-			<div>
-				<input id="ssc-author-input" name="author" placeholder="nick name" />
-			</div>
-			<div>
-				<textarea id="ssc-body-input" name="body" placeholder="type your comment..."></textarea>
-			</div>
-			<button id="ssc-submit" type="submit">Post</button>
+			<textarea id="ssc-body-input" name="body" placeholder="type your comment..."></textarea>
 		</div>
+		<button id="ssc-submit" type="submit">Post</button>
 		<input type="hidden" name="redirect" value="<${REDIRECT_RAW}/>" />
 		<input type="hidden" name="article_id" value="{{ .ArticleId }}" />
 		{{ .CSRFField }}
 	</form>
-{{ end }}
 {{/* vim: set ts=2 sw=2 noet tw=0 */}}

@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/gorilla/mux"
 )
@@ -28,22 +29,34 @@ type AdminPageArgs struct {
 }
 
 func addComment(w http.ResponseWriter, req *http.Request) {
+	var needsModeration bool
+	if havePermission("post-unmoderated", req) {
+		needsModeration = false
+	} else if havePermission("post-moderated", req) {
+		needsModeration = true
+	} else {
+		w.WriteHeader(401)
+		w.Write([]byte("You do not have permission to post."))
+		return
+	}
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(400)
 		w.Write([]byte("Invalid form body"))
 	}
 
-	val, err := mustGetKey(w, "require-moderation")
+	username, err := url.QueryUnescape(req.Header.Get("X-Sandstorm-Username"))
 	if err != nil {
+		// I(zenhack) *think* this should never occur; sandstorm-http-bridge
+		// should never hand us something like this.
+		serverErr(w, "URL-decoding username.", err)
 		return
 	}
 
-	requireModeration := val != "false"
-
 	err = insertComment(Comment{
-		Author:          req.PostForm.Get("author"),
+		Author:          username,
 		Body:            req.PostForm.Get("body"),
-		NeedsModeration: requireModeration,
+		NeedsModeration: needsModeration,
 		ArticleId:       req.PostForm.Get("article_id"),
 	})
 	if err != nil {

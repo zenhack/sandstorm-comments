@@ -92,17 +92,24 @@ const pkgdef :Spk.PackageDefinition = (
           ),
         ),
         (
-          name = "post",
-          title = (defaultText = "Post comments"),
+          name = "post-moderated",
+          title = (defaultText = "Post moderated comments"),
           description = (
-            defaultText = "Post comments"
+            defaultText = "Post moderated comments"
+          ),
+        ),
+        (
+          name = "post-unmoderated",
+          title = (defaultText = "Post unmoderated comments"),
+          description = (
+            defaultText = "Post unmoderated comments"
           ),
         ),
       ],
       roles = [
         (
           title = (defaultText = "administrator"),
-          permissions  = [true, true],
+          permissions  = [true, true, true],
           verbPhrase = (defaultText = "change settings and moderate comments"),
           description = (
             defaultText = "Administrators may change settings and moderate comments."
@@ -110,15 +117,21 @@ const pkgdef :Spk.PackageDefinition = (
         ),
         (
           title = (defaultText = "commentor"),
-          permissions  = [false, true],
-          verbPhrase = (defaultText = "post comments"),
-          description = (defaultText = "Commentors can post comments"),
+          permissions  = [false, true, false],
+          verbPhrase = (defaultText = "post (moderated) comments"),
+          description = (defaultText = "Commentors can post (moderated) comments"),
         ),
         (
           title = (defaultText = "viewer"),
-          permissions  = [false, false],
+          permissions = [false, false, false],
           verbPhrase = (defaultText = "view comments"),
           description = (defaultText = "Viewers can view comments."),
+        ),
+        (
+          title = (defaultText = "trusted commentor"),
+          permissions  = [false, true, true],
+          verbPhrase = (defaultText = "post (unmoderated) comments"),
+          description = (defaultText = "Trusted commentors can post (unmoderated) comments"),
         ),
       ],
     ),

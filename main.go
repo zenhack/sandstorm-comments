@@ -46,23 +46,19 @@ func main() {
 	r.Methods("GET").PathPrefix("/static/").
 		Handler(http.FileServer(http.Dir(staticDir + "/..")))
 	r.Methods("GET").Path("/").
-		MatcherFunc(havePermission("admin")).
+		MatcherFunc(matchPermission("admin")).
 		HandlerFunc(adminPage)
 	r.Methods("POST").Path("/settings").
-		MatcherFunc(havePermission("admin")).
+		MatcherFunc(matchPermission("admin")).
 		Handler(csrfGuard{csrfKey, "/", http.HandlerFunc(postSettings)})
 	r.Methods("POST").Path("/delete/{id:[0-9]+}").
-		MatcherFunc(havePermission("admin")).
+		MatcherFunc(matchPermission("admin")).
 		Handler(csrfGuard{csrfKey, "/", http.HandlerFunc(deleteComment)})
 	r.Methods("POST").Path("/approve/{id:[0-9]+}").
-		MatcherFunc(havePermission("admin")).
+		MatcherFunc(matchPermission("admin")).
 		Handler(csrfGuard{csrfKey, "/", http.HandlerFunc(approveComment)})
 	r.Methods("POST").Path("/new-comment").
-		MatcherFunc(havePermission("post")).
 		Handler(csrfGuard{csrfKey, "/comments", http.HandlerFunc(addComment)})
-	r.Methods("GET").Path("/comment-sign-in").
-		MatcherFunc(havePermission("post")).
-		Handler(http.HandlerFunc(commentSignIn))
 	r.Methods("GET").Path("/comments").HandlerFunc(showComments)
 	http.Handle("/", r)
 	http.ListenAndServe(":8000", nil)

@@ -48,7 +48,9 @@ window.addEventListener('DOMContentLoaded', function() {
 				'<${PROTO}/>': apiInfo.proto,
 				'<${BASE_URL}/>': apiInfo.baseUrl,
 				'<${REDIRECT_RAW}/>': window.location.href,
-				'<${REDIRECT_URI}/>': encodeURIComponent(window.location.href),
+				'<${REDIRECT_ENCODED}/>': encodeURIComponent(window.location.href),
+        '<${SHARE_URL}/>': apiInfo.proto + '//' + apiInfo.maindomain +
+            '/shared/' + apiInfo.key
       }
       var text = req.responseText
       for (var key in substitutions) {
