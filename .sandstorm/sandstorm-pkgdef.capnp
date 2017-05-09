@@ -141,6 +141,7 @@ const pkgdef :Spk.PackageDefinition = (
     # here are only to tell it where to find files that the app wants.
     searchPath = [
       ( sourcePath = "." ),  # Search this directory first.
+      ( sourcePath = ".."),
       ( sourcePath = "/",    # Then search the system root directory.
         hidePaths = [ "home", "proc", "sys",
                       "etc/passwd", "etc/hosts", "etc/host.conf",
@@ -209,7 +210,7 @@ const pkgdef :Spk.PackageDefinition = (
 
 const myCommand :Spk.Manifest.Command = (
   # Here we define the command used to start up your server.
-  argv = ["/sandstorm-http-bridge", "8000", "--", "/opt/app/app"],
+  argv = ["/sandstorm-http-bridge", "8000", "--", "/app"],
   environ = [
     # Note that this defines the *entire* environment seen by your app.
     (key = "PATH", value = "/usr/local/bin:/usr/bin:/bin"),
@@ -219,9 +220,9 @@ const myCommand :Spk.Manifest.Command = (
     # the app's Sandstorm-specific integration code.
 
     (key = "DB_PATH", value = "/var/db.sqlite3"),
-    (key = "STATIC_ASSETS", value = "/opt/app/static"),
-    (key = "TEMPLATE_DIR", value = "/opt/app/templates"),
-    (key = "SCHEMA_FILE", value = "/opt/app/schema.sql"),
+    (key = "STATIC_ASSETS", value = "/static"),
+    (key = "TEMPLATE_DIR", value = "/templates"),
+    (key = "SCHEMA_FILE", value = "/schema.sql"),
   ]
 );
 

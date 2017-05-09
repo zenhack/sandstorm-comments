@@ -2,6 +2,7 @@
 # This file is automatically updated and rewritten in sorted order every time
 # the app runs in dev mode. You may manually add or remove files, but don't
 # expect comments or ordering to be retained.
+app
 etc/ld.so.cache
 etc/localtime
 etc/mime.types
@@ -13,15 +14,14 @@ lib/x86_64-linux-gnu/libdl.so.2
 lib/x86_64-linux-gnu/libpthread-2.19.so
 lib/x86_64-linux-gnu/libpthread.so.0
 lib64/ld-linux-x86-64.so.2
-opt/app/app
-opt/app/schema.sql
-opt/app/static/embed.min.js
-opt/app/static/offer-iframe.js
-opt/app/static/style.css
-opt/app/templates
-opt/app/templates/comments.html
-opt/app/templates/index.html
 proc/cpuinfo
 sandstorm-http-bridge
 sandstorm-http-bridge-config
 sandstorm-manifest
+schema.sql
+static/embed.min.js
+static/offer-iframe.js
+static/style.css
+templates
+templates/comments.html
+templates/index.html
